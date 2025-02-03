@@ -5,7 +5,6 @@ ssh -i 他給的那個.pem admin@ec2-54-178-66-208.ap-northeast-1.compute.amazon
 
 2.安裝必要的 Python 依賴：<幫我確認一下伺服器有沒有這些插件>
 ```
-
 sudo apt-get update && sudo apt-get install uvicorn cron pip -y
 pip install fastapi mysql-connector-python redis
 ```
