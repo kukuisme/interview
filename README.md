@@ -23,10 +23,11 @@ curl http://your_server_ip:8888/users/1
 ```
 
 5.如果資料庫中有 id=1 的用戶，看到下列就截圖收工：
+```
 {
     "username": "user1",
     "email": "user1@example.com",
     "redis_value": "redis_value1"
 }
-
+```
 
