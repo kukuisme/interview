@@ -14,10 +14,12 @@ MYSQL_CONFIG = {
 }
 
 
-REDIS_HOST = "XXX.XXX.XXX.XXX"
-REDIS_PORT = 6379
-REDIS_PASSWORD = "password"
-
+REDIS_CONFIG = {
+    "host": "XXX.XXX.XXX.XXX",
+    "port": 6379,
+    "password": "password",
+    "decode_responses": True
+}
 
 def get_mysql_connection():
     """Mysql Connect"""
@@ -30,7 +32,7 @@ def get_mysql_connection():
 def get_redis_connection():
     """ Redis Connect"""
     try:
-        return redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, decode_responses=True)
+        return redis.Redis(**REDIS_CONFIG)
     except redis.RedisError as e:
         raise HTTPException(status_code=500, detail="Redis WIRING ERROR：" + str(e))
 
