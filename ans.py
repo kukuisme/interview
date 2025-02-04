@@ -1,47 +1,90 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 import mysql.connector
 import redis
 
 app = FastAPI()
 
-# 連接 MySQL
-mysql_conn = mysql.connector.connect(
-    host="54.150.84.198",  # DB 伺服器 IP
-    user="interview",       # MySQL 帳號
-    password="nfaafrCya2zTwnHn",  # MySQL 密碼
-    database="interview_db"  #幫我確認一下他實際ＭＹＳＱＬ名稱是啥
-)
-mysql_cursor = mysql_conn.cursor(dictionary=True)
 
-# 連接 Redis
-redis_client = redis.Redis(
-    host="54.150.84.198",  # Redis 伺服器 IP
-    port=6379,
-    password="fYNmRdZVkuX6",  # Redis 密碼
-    decode_responses=True
-)
+MYSQL_CONFIG = {
+    "host": "XXX.XXX.XXX.XXX",
+    "user": "interview",
+    "password": "password",
+    "database": "interview"
+}
 
-@app.get("/users/{id}")
-def get_user(id: int):
+
+REDIS_HOST = "XXX.XXX.XXX.XXX"
+REDIS_PORT = 6379
+REDIS_PASSWORD = "password"
+
+
+def get_mysql_connection():
+    """Mysql Connect"""
     try:
-        # 查詢 MySQL
-        mysql_cursor.execute("SELECT username, email FROM users WHERE id = %s", (id,))
-        user = mysql_cursor.fetchone()
+        return mysql.connector.connect(**MYSQL_CONFIG)
+    except mysql.connector.Error as e:
+        raise HTTPException(status_code=500, detail="MySQL WIRING ERROR：" + str(e))
+
+
+def get_redis_connection():
+    """ Redis Connect"""
+    try:
+        return redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, decode_responses=True)
+    except redis.RedisError as e:
+        raise HTTPException(status_code=500, detail="Redis WIRING ERROR：" + str(e))
+
+
+@app.get("/users/{user_id}")
+def get_user(user_id: int):
+    try:
+
+        conn = get_mysql_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT username, email FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
 
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            return JSONResponse(
+                status_code=400,
+                content={"error": "USER ID DOES NOT EXIST", "user_id": user_id}
+            )
 
-        # 查詢 Redis
-        redis_value = redis_client.get(user["username"])
-        if redis_value is None:
-            redis_value = "Not found in Redis"
+        username = user["username"]
+        email = user["email"]
 
-        return {
-            "username": user["username"],
-            "email": user["email"],
-            "redis_value": redis_value
-        }
-    
+
+        redis_conn = get_redis_connection()
+        redis_value = redis_conn.get(username)
+
+        if not redis_value:
+            redis_value = "No value in Redis"
+
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "username": username,
+                "email": email,
+                "redis_value": redis_value
+            }
+        )
+
+    except mysql.connector.Error as e:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "MySQL 查詢錯誤", "details": str(e)}
+        )
+    except redis.RedisError as e:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Redis 連線錯誤", "details": str(e)}
+        )
     except Exception as e:
-        return {"error": str(e)}
-
+        return JSONResponse(
+            status_code=400,
+            content={"error": "未知錯誤", "details": str(e)}
+        )
